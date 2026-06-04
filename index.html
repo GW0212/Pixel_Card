@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PIXEL CARD — 픽셀 캐릭터 카드 생성기</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PIXEL CARD">
+<meta name="theme-color" content="#f0ede4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0d14" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet">
+<style>
+:root,[data-theme="light"]{
+  --bg:#f0ede4;--bg2:#e4e0d5;--panel:#faf8f3;--border:#c8c0aa;--shadow:#a09880;
+  --accent:#c8860a;--accent2:#d63070;--accent3:#1a8a82;--accent4:#6c3fc5;
+  --text:#1a1612;--muted:#7a7060;--green:#2a7a30;--red:#c03030;--orange:#c06010;
+  --scan:rgba(0,0,0,0.04);--glow1:rgba(100,70,200,0.06);--glow2:rgba(20,130,120,0.06);
+  --card-bg1:#fdf6e3;--card-bg2:#f5e6c0;--card-bg3:#e8d0a0;
+  --card-footer:rgba(0,0,0,0.06);--card-stat-bg:rgba(0,0,0,0.08);
+  --card-stat-border:rgba(0,0,0,0.12);--card-sep:rgba(0,0,0,0.1);--dot-shadow:#888;
+}
+[data-theme="dark"]{
+  --bg:#0d0d14;--bg2:#1c1c2e;--panel:#252540;--border:#4a4a7a;--shadow:#000;
+  --accent:#f6d860;--accent2:#ff6b9d;--accent3:#4ecdc4;--accent4:#a78bfa;
+  --text:#eeeef8;--muted:#9090b0;--green:#6bcb77;--red:#ff6b6b;--orange:#ffa62b;
+  --scan:rgba(0,0,0,0.08);--glow1:rgba(167,139,250,0.07);--glow2:rgba(78,205,196,0.07);
+  --card-bg1:#1e1e36;--card-bg2:#1a2848;--card-bg3:#143060;
+  --card-footer:rgba(0,0,0,0.5);--card-stat-bg:rgba(0,0,0,0.45);
+  --card-stat-border:rgba(255,255,255,0.18);--card-sep:rgba(255,255,255,0.14);--dot-shadow:#000;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;image-rendering:pixelated;}
+body{background:var(--bg);color:var(--text);font-family:'VT323',monospace;font-size:18px;
+  min-height:100vh;overflow-x:hidden;transition:background .25s,color .25s;text-align:center;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(circle at 20% 20%,var(--glow1) 0%,transparent 50%),
+  radial-gradient(circle at 80% 80%,var(--glow2) 0%,transparent 50%);}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,var(--scan) 2px,var(--scan) 4px);}
+
+.container{max-width:1160px;margin:0 auto;padding:2rem 1.5rem;position:relative;z-index:1;}
+
+/* 테마 토글 */
+.theme-toggle{position:fixed;top:16px;right:16px;z-index:100;background:var(--panel);
+  border:2px solid var(--border);color:var(--text);font-family:'Press Start 2P',monospace;
+  font-size:8px;padding:8px 12px;cursor:pointer;box-shadow:3px 3px 0 var(--shadow);
+  transition:all .1s;letter-spacing:1px;display:flex;align-items:center;gap:6px;}
+.theme-toggle:hover{box-shadow:1px 1px 0 var(--shadow);transform:translate(2px,2px);}
+.theme-toggle:active{box-shadow:none;transform:translate(3px,3px);}
+
+header{text-align:center;margin-bottom:2.5rem;}
+.logo{font-family:'Press Start 2P',monospace;font-size:clamp(16px,3vw,28px);color:var(--accent);
+  letter-spacing:4px;margin-bottom:.5rem;animation:flicker 4s infinite;}
+[data-theme="dark"] .logo{text-shadow:4px 4px 0 rgba(246,216,96,.3),0 0 30px rgba(246,216,96,.4);}
+.logo span{color:var(--accent2);}
+.subtitle{color:var(--muted);font-size:16px;letter-spacing:2px;}
+@keyframes flicker{0%,95%,100%{opacity:1;}96%{opacity:.8;}97%{opacity:1;}98%{opacity:.9;}}
+
+/* 레이아웃 */
+.main-layout{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start;text-align:left;}
+@media(max-width:800px){.main-layout{grid-template-columns:1fr;}}
+
+/* 카드 우측 sticky */
+.preview-sticky{
+  position:sticky;
+  top:2rem;
+  display:flex;
+  flex-direction:column;
+  gap:.8rem;
+}
+@media(max-width:800px){.preview-sticky{position:static;}}
+
+/* 패널 */
+.pixel-panel{background:var(--panel);border:3px solid var(--border);
+  box-shadow:4px 4px 0 var(--shadow);padding:1.4rem;position:relative;
+  transition:background .25s,border-color .25s;margin-bottom:1.2rem;}
+[data-theme="dark"] .pixel-panel{box-shadow:4px 4px 0 #000,inset 0 0 0 1px rgba(255,255,255,.06);}
+.pixel-panel::before{content:attr(data-label);position:absolute;top:-13px;left:14px;
+  background:var(--accent);color:#000;font-family:'Press Start 2P',monospace;
+  font-size:7px;padding:3px 8px;letter-spacing:1px;}
+
+/* 폼 */
+.form-group{margin-bottom:.9rem;}
+.form-label{display:block;color:var(--accent3);font-size:13px;letter-spacing:2px;margin-bottom:3px;}
+.form-input{width:100%;background:var(--bg2);border:2px solid var(--border);color:var(--text);
+  font-family:'VT323',monospace;font-size:18px;padding:5px 9px;outline:none;
+  transition:border-color .1s,background .25s;-webkit-tap-highlight-color:transparent;}
+.form-input:focus{border-color:var(--accent);}
+.form-input::placeholder{color:var(--muted);}
+
+/* 직업 커스텀 */
+.job-custom-row{display:flex;gap:6px;margin-bottom:8px;align-items:center;}
+.job-icon-btn{width:52px;height:38px;font-size:22px;text-align:center;
+  background:var(--bg2);border:2px solid var(--border);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:border-color .1s;flex-shrink:0;position:relative;}
+.job-icon-btn:hover{border-color:var(--accent);}
+.job-name-input{flex:1;font-size:16px;}
+
+/* 이모지 피커 팝업 */
+.emoji-picker-wrap{position:relative;}
+.emoji-picker{position:absolute;top:calc(100% + 4px);left:0;z-index:500;
+  background:var(--panel);border:2px solid var(--border);
+  box-shadow:4px 4px 0 var(--shadow);padding:8px;width:268px;
+  display:none;flex-wrap:wrap;gap:3px;max-height:220px;overflow-y:auto;}
+.emoji-picker.open{display:flex;}
+.emoji-cat-label{width:100%;font-size:9px;color:var(--muted);letter-spacing:1px;
+  padding:3px 0 2px;border-top:1px solid var(--border);margin-top:2px;}
+.emoji-cat-label:first-child{border-top:none;margin-top:0;padding-top:0;}
+.ep-btn{width:32px;height:32px;font-size:18px;background:var(--bg2);border:1px solid transparent;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .1s;}
+.ep-btn:hover{border-color:var(--accent);background:rgba(200,134,10,.1);transform:scale(1.2);}
+
+/* 직업 프리셋 버튼 */
+.job-presets-label{font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;display:block;}
+.job-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+.job-btn{background:var(--bg2);border:2px solid var(--border);color:var(--muted);
+  font-family:'VT323',monospace;font-size:13px;padding:5px 3px;cursor:pointer;
+  text-align:center;transition:all .1s;letter-spacing:1px;line-height:1.3;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.job-btn:hover{border-color:var(--accent4);color:var(--accent4);}
+.job-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(200,134,10,.08);
+  box-shadow:0 0 8px rgba(200,134,10,.15);}
+[data-theme="dark"] .job-btn.active{background:rgba(246,216,96,.08);box-shadow:0 0 8px rgba(246,216,96,.2);}
+
+/* 슬라이더 */
+.stat-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+.stat-name{width:76px;font-size:12px;color:var(--accent3);letter-spacing:1px;flex-shrink:0;}
+.stat-slider{flex:1;-webkit-appearance:none;-moz-appearance:none;height:8px;
+  background:var(--bg2);border:2px solid var(--border);outline:none;cursor:pointer;
+  touch-action:pan-x;-webkit-tap-highlight-color:transparent;}
+.stat-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;
+  background:var(--accent);border:2px solid #000;cursor:pointer;box-shadow:2px 2px 0 var(--shadow);}
+.stat-slider::-moz-range-thumb{width:16px;height:16px;
+  background:var(--accent);border:2px solid #000;cursor:pointer;border-radius:0;}
+.stat-val{width:28px;text-align:right;font-size:15px;color:var(--accent);}
+
+/* 컬러 피커 */
+.color-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;}
+.color-dot{width:26px;height:26px;border:3px solid transparent;cursor:pointer;
+  transition:transform .1s;box-shadow:2px 2px 0 var(--dot-shadow);}
+.color-dot:hover{transform:scale(1.15);}
+.color-dot.active{border-color:var(--text);transform:scale(1.15);}
+
+/* 성별 토글 */
+.gender-row{display:flex;gap:6px;}
+.gender-btn{flex:1;background:var(--bg2);border:2px solid var(--border);color:var(--muted);
+  font-family:'VT323',monospace;font-size:17px;padding:5px;cursor:pointer;
+  letter-spacing:1px;transition:all .1s;}
+.gender-btn:hover{border-color:var(--accent4);color:var(--accent4);}
+.gender-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(200,134,10,.08);}
+[data-theme="dark"] .gender-btn.active{background:rgba(246,216,96,.08);}
+
+/* 캐릭터 커스텀 */
+.char-custom-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.char-opt-label{font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:3px;display:block;}
+.char-sel{width:100%;background:var(--bg2);border:2px solid var(--border);color:var(--text);
+  font-family:'VT323',monospace;font-size:16px;padding:4px 6px;outline:none;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;}
+.char-sel:focus{border-color:var(--accent);}
+
+/* 생성 버튼 */
+.gen-btn{width:100%;background:var(--accent);color:#000;border:none;
+  font-family:'Press Start 2P',monospace;font-size:10px;padding:13px;cursor:pointer;
+  letter-spacing:2px;box-shadow:4px 4px 0 var(--shadow);transition:all .1s;text-transform:uppercase;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.gen-btn:hover{box-shadow:2px 2px 0 var(--shadow);transform:translate(2px,2px);}
+.gen-btn:active{box-shadow:none;transform:translate(4px,4px);}
+
+
+/* 카드: aspect-ratio 제거하고 고정 높이로 PNG비율 맞추기 */
+#card-output{
+  background:linear-gradient(135deg,var(--card-bg1) 0%,var(--card-bg2) 50%,var(--card-bg3) 100%);
+  border:4px solid var(--accent);
+  box-shadow:6px 6px 0 var(--shadow),0 0 20px rgba(200,134,10,.1);
+  position:relative;overflow:hidden;
+  display:flex;flex-direction:column;
+  width:100%;
+  transition:background .25s;
+}
+[data-theme="dark"] #card-output{box-shadow:6px 6px 0 #000,0 0 30px rgba(246,216,96,.15);}
+
+.card-header-bar{background:var(--accent);padding:7px 14px;display:flex;
+  justify-content:space-between;align-items:center;flex-shrink:0;}
+.card-header-title,.card-lv{font-family:'Press Start 2P',monospace;font-size:7px;color:#000;letter-spacing:2px;}
+
+.card-char-area{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:12px 14px;position:relative;text-align:center;}
+
+.corner{position:absolute;width:10px;height:10px;border-color:var(--accent);border-style:solid;opacity:.5;}
+.corner-tl{top:34px;left:7px;border-width:2px 0 0 2px;}
+.corner-tr{top:34px;right:7px;border-width:2px 2px 0 0;}
+.corner-bl{bottom:30px;left:7px;border-width:0 0 2px 2px;}
+.corner-br{bottom:30px;right:7px;border-width:0 2px 2px 0;}
+
+.card-name{font-family:'Press Start 2P',monospace;font-size:clamp(7px,1.8vw,11px);
+  color:var(--accent);text-align:center;text-shadow:1px 1px 0 rgba(0,0,0,.3);
+  margin-bottom:3px;letter-spacing:1px;word-break:break-all;}
+[data-theme="dark"] .card-name{text-shadow:2px 2px 0 #000;}
+.card-job-badge{font-size:12px;letter-spacing:2px;padding:2px 9px;border:1px solid currentColor;margin-bottom:7px;}
+.card-company{font-size:12px;color:var(--accent3);letter-spacing:2px;text-align:center;margin-bottom:4px;}
+.card-contact{font-size:11px;color:var(--muted);letter-spacing:1px;text-align:center;margin-bottom:4px;word-break:break-all;}
+/* ① MOTTO 중앙 정렬 + 줄바꿈 대응 */
+.card-motto-inline{font-size:11px;color:var(--accent);letter-spacing:1px;
+  text-align:center;margin-bottom:8px;font-style:italic;word-break:break-all;}
+
+.card-stats{width:100%;padding:8px 2px 0;border-top:2px solid var(--card-sep);}
+.card-stat-row{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.card-stat-label{width:56px;font-size:9px;color:var(--muted);letter-spacing:1px;flex-shrink:0;}
+.card-stat-bar-bg{flex:1;height:7px;background:var(--card-stat-bg);
+  border:1px solid var(--card-stat-border);position:relative;overflow:hidden;}
+.card-stat-bar-fill{height:100%;transition:width .5s ease;position:relative;}
+.card-stat-bar-fill::after{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent,transparent 3px,rgba(0,0,0,.2) 3px,rgba(0,0,0,.2) 4px);}
+.card-stat-num{width:18px;text-align:right;font-size:10px;color:var(--text);flex-shrink:0;}
+
+.card-footer{background:var(--card-footer);padding:6px 12px;display:flex;
+  justify-content:space-between;align-items:center;border-top:2px solid var(--card-sep);flex-shrink:0;}
+.card-rarity{font-size:10px;letter-spacing:1px;padding:1px 5px;border:1px solid currentColor;}
+
+/* 액션 버튼 */
+.action-row{display:flex;gap:7px;}
+.action-btn{flex:1;background:var(--bg2);border:2px solid var(--border);color:var(--text);
+  font-family:'VT323',monospace;font-size:16px;padding:7px;cursor:pointer;
+  letter-spacing:2px;transition:all .1s;text-align:center;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.action-btn:hover{border-color:var(--accent3);color:var(--accent3);}
+.action-btn.primary{border-color:var(--accent);color:var(--accent);}
+.action-btn.primary:hover{background:rgba(200,134,10,.08);}
+[data-theme="dark"] .action-btn.primary:hover{background:rgba(246,216,96,.08);}
+
+/* 파티클 */
+.particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.p{position:absolute;font-size:12px;opacity:0;animation:float-up linear infinite;}
+@keyframes float-up{0%{transform:translateY(100vh) rotate(0deg);opacity:0;}
+  10%{opacity:.3;}90%{opacity:.15;}100%{transform:translateY(-20px) rotate(360deg);opacity:0;}}
+
+/* 직업/희귀도 색상 */
+.job-qa{color:var(--accent3);}.job-dev{color:var(--accent4);}.job-design{color:var(--accent2);}
+.job-pm{color:var(--orange);}.job-data{color:var(--green);}.job-other{color:var(--accent);}.job-custom{color:var(--accent2);}
+.rarity-common{color:var(--muted);}.rarity-rare{color:#2070c0;}.rarity-epic{color:var(--accent4);}.rarity-legendary{color:var(--accent);}
+[data-theme="dark"] .rarity-rare{color:#60a5fa;}
+/* CARD THEME */
+.theme-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+.theme-btn{height:36px;border:2px solid var(--border);cursor:pointer;
+  border-radius:2px;transition:all .1s;position:relative;overflow:hidden;}
+.theme-btn:hover{border-color:var(--accent);transform:scale(1.05);}
+.theme-btn.active{border-color:var(--text);border-width:3px;transform:scale(1.05);}
+.theme-btn span{position:absolute;bottom:2px;left:0;right:0;font-size:8px;
+  text-align:center;color:rgba(255,255,255,.85);text-shadow:0 1px 2px #000;
+  font-family:'Press Start 2P',monospace;letter-spacing:0;}
+
+
+/* ============================================================
+   모바일 최적화
+   ============================================================ */
+
+/* 터치 디바이스: hover 제거, active로 대체 */
+@media(hover:none){
+  .theme-toggle:hover{box-shadow:3px 3px 0 var(--shadow);transform:none;}
+  .job-btn:hover{border-color:var(--border);color:var(--muted);}
+  .action-btn:hover{border-color:var(--border);color:var(--text);}
+  .color-dot:hover{transform:none;}
+  .ep-btn:hover{border-color:transparent;background:var(--bg2);transform:none;}
+  .theme-btn:hover{border-color:var(--border);transform:none;}
+  .gen-btn:hover{box-shadow:4px 4px 0 var(--shadow);transform:none;}
+}
+
+/* 모바일 전용 미리보기 레이블 */
+.mobile-preview-label{
+  display:none; /* 데스크탑에서 숨김 */
+  font-family:'Press Start 2P',monospace;
+  font-size:7px;
+  color:var(--muted);
+  letter-spacing:2px;
+  text-align:center;
+  padding:4px 0 2px;
+}
+
+/* 640px 이하: 태블릿/소형 화면 */
+@media(max-width:640px){
+  .mobile-preview-label{display:block;}
+  body{font-size:17px;}
+
+  /* 컨테이너 패딩 축소 */
+  .container{padding:1rem .9rem;}
+
+  /* 헤더 */
+  header{margin-bottom:1.5rem;padding-top:.5rem;}
+  .logo{font-size:clamp(13px,5vw,20px);letter-spacing:2px;}
+  .subtitle{font-size:14px;letter-spacing:1px;}
+
+  /* 테마 토글 버튼 — 우상단 작게 */
+  .theme-toggle{
+    top:10px;right:10px;
+    padding:6px 9px;
+    font-size:7px;
+    gap:4px;
+  }
+  #theme-label{display:none;} /* 모바일에서 텍스트 숨기고 아이콘만 */
+
+  /* 메인 레이아웃: 카드를 맨 위로 */
+  .main-layout{
+    grid-template-columns:1fr;
+    gap:1rem;
+  }
+  /* 카드를 왼쪽 폼보다 먼저 보이도록 order 변경 */
+  .preview-sticky{order:-1;position:static;}
+  .main-layout > div:first-child{order:1;}
+
+  /* 패널 */
+  .pixel-panel{padding:1rem .9rem;margin-bottom:1rem;}
+  .pixel-panel::before{font-size:6px;padding:2px 7px;top:-11px;}
+
+  /* 폼 요소 — 터치 타겟 최소 44px */
+  .form-input{font-size:16px;padding:8px 10px;} /* iOS 줌 방지 최소 16px */
+  .form-label{font-size:12px;}
+
+  /* 직업 아이콘 버튼 */
+  .job-icon-btn{width:48px;height:44px;font-size:24px;}
+  .job-name-input{font-size:16px;}
+
+  /* 이모지 피커 — 모바일에서 화면 너비에 맞게 */
+  .emoji-picker{
+    width:calc(100vw - 2rem);
+    max-width:320px;
+    left:0;
+    max-height:200px;
+  }
+  .ep-btn{width:38px;height:38px;font-size:20px;}
+
+  /* 직업 그리드 3열로 변경 (4열 → 3열) */
+  .job-grid{grid-template-columns:repeat(3,1fr);gap:4px;}
+  .job-btn{font-size:12px;padding:7px 2px;line-height:1.4;}
+
+  /* 슬라이더 — 모바일 터치 최적화 */
+  .stat-row{gap:6px;margin-bottom:6px;}
+  .stat-name{width:68px;font-size:11px;}
+  .stat-slider{height:12px;} /* 더 두껍게 */
+  .stat-slider::-webkit-slider-thumb{width:22px;height:22px;} /* 터치 타겟 확대 */
+  .stat-val{font-size:14px;width:26px;}
+
+  /* 컬러 닷 — 터치 타겟 확대 */
+  .color-dot{width:32px;height:32px;}
+
+  /* 성별 버튼 */
+  .gender-btn{font-size:16px;padding:8px;}
+
+  /* 캐릭터 커스텀 그리드 */
+  .char-custom-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .char-sel{font-size:15px;padding:6px 6px;}
+  .char-opt-label{font-size:10px;}
+
+  /* 카드 미리보기 */
+  #card-output{max-width:360px;margin:0 auto;}
+  .card-char-area{padding:10px 12px;}
+
+  /* 스프라이트 크기 약간 줄이기 */
+  #sprite-canvas{width:96px !important;height:96px !important;}
+
+  /* 액션 버튼 */
+  .action-row{gap:5px;}
+  .action-btn{font-size:14px;padding:10px 4px;} /* 터치 타겟 확대 */
+
+  /* GENERATE 버튼 */
+  .gen-btn{font-size:9px;padding:14px;}
+
+  /* 카드 테마 그리드 */
+  .theme-grid{grid-template-columns:repeat(4,1fr);gap:4px;}
+  .theme-btn{height:32px;}
+  .theme-btn span{font-size:6px;}
+}
+
+/* 380px 이하: 소형 폰 */
+@media(max-width:380px){
+  .container{padding:.8rem .7rem;}
+  .logo{font-size:clamp(11px,4.5vw,16px);}
+
+  /* 직업 그리드 2열 */
+  .job-grid{grid-template-columns:repeat(3,1fr);}
+
+  /* 캐릭터 셀렉트 전체폭 */
+  .char-custom-grid{grid-template-columns:1fr;}
+
+  /* 카드 */
+  #card-output{max-width:100%;}
+  #sprite-canvas{width:84px !important;height:84px !important;}
+
+  .action-btn{font-size:13px;}
+  .theme-grid{grid-template-columns:repeat(3,1fr);}
+}
+
+/* 터치 디바이스 active 피드백 */
+@media(hover:none){
+  .job-btn:active{border-color:var(--accent);color:var(--accent);background:rgba(200,134,10,.1);}
+  .action-btn:active{border-color:var(--accent3);color:var(--accent3);}
+  .gen-btn:active{box-shadow:none;transform:translate(4px,4px);}
+  .color-dot:active{transform:scale(1.2);}
+  .theme-btn:active{border-color:var(--accent);transform:scale(1.05);}
+  .ep-btn:active{border-color:var(--accent);background:rgba(200,134,10,.15);transform:scale(1.1);}
+}
+
+canvas{display:none;}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()">
+  <span id="theme-icon">🌙</span><span id="theme-label">DARK</span>
+</button>
+<div class="particles" id="particles"></div>
+
+<div class="container">
+  <header>
+    <div class="logo">PIXEL <span>CARD</span></div>
+    <div class="subtitle">&gt; 나만의 8BIT RPG 명함 생성기 &lt;</div>
+  </header>
+
+  <div class="main-layout">
+    <!-- 왼쪽: 입력 폼 -->
+    <div>
+      <!-- CHARACTER INFO -->
+      <div class="pixel-panel" data-label="CHARACTER INFO">
+        <div class="form-group">
+          <label class="form-label">▸ 이름 (NAME)</label>
+          <input class="form-input" id="inp-name" type="text" placeholder="홍길동" maxlength="14">
+        </div>
+        <div class="form-group">
+          <label class="form-label">▸ 직업 아이콘 + 직업명</label>
+          <div class="job-custom-row">
+            <div class="emoji-picker-wrap">
+              <button class="job-icon-btn" id="job-icon-btn" onclick="toggleEmojiPicker(event)" title="아이콘 선택">🔍</button>
+              <div class="emoji-picker" id="emoji-picker"></div>
+            </div>
+            <input class="form-input job-name-input" id="inp-job-name" type="text" placeholder="직업명 입력" maxlength="18" oninput="updateCard()">
+          </div>
+          <span class="job-presets-label">▸ 프리셋으로 빠르게 채우기</span>
+          <div class="job-grid">
+            <button class="job-btn active" data-job="QA_ENG"     onclick="selectJobPreset(this)">🔍<br>QA</button>
+            <button class="job-btn"        data-job="DEVELOPER"  onclick="selectJobPreset(this)">💻<br>개발자</button>
+            <button class="job-btn"        data-job="DESIGNER"   onclick="selectJobPreset(this)">🎨<br>디자이너</button>
+            <button class="job-btn"        data-job="PM"         onclick="selectJobPreset(this)">📋<br>기획자</button>
+            <button class="job-btn"        data-job="DATA"       onclick="selectJobPreset(this)">📊<br>데이터</button>
+            <button class="job-btn"        data-job="ACCOUNTANT" onclick="selectJobPreset(this)">💼<br>세무사</button>
+            <button class="job-btn"        data-job="DOCTOR"     onclick="selectJobPreset(this)">🏥<br>의료인</button>
+            <button class="job-btn"        data-job="MARKETER"   onclick="selectJobPreset(this)">📣<br>마케터</button>
+            <button class="job-btn"        data-job="TEACHER"    onclick="selectJobPreset(this)">📚<br>교육자</button>
+            <button class="job-btn"        data-job="CREATOR"    onclick="selectJobPreset(this)">🎬<br>크리에이터</button>
+            <button class="job-btn"        data-job="SALES"      onclick="selectJobPreset(this)">🤝<br>영업</button>
+            <button class="job-btn"        data-job="OTHER"      onclick="selectJobPreset(this)">⚔️<br>기타</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">▸ 회사 (GUILD)</label>
+          <input class="form-input" id="inp-company" type="text" placeholder="ex) nGle Corp." maxlength="18">
+        </div>
+        <div class="form-group">
+          <label class="form-label">▸ 연락처 (CONTACT)</label>
+          <input class="form-input" id="inp-contact" type="text" placeholder="ex) hello@example.com" maxlength="28">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">▸ 한마디 (MOTTO)</label>
+          <input class="form-input" id="inp-motto" type="text" placeholder="ex) 버그는 내가 잡는다" maxlength="24">
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="pixel-panel" data-label="STATS">
+        <div id="stat-sliders"></div>
+      </div>
+
+      <!-- STYLE -->
+      <div class="pixel-panel" data-label="STYLE">
+        <div class="form-group">
+          <label class="form-label">▸ 셔츠 컬러</label>
+          <div class="color-row" id="color-picker"></div>
+        </div>
+
+        <!-- 캐릭터 커스텀 -->
+        <div class="form-group">
+          <label class="form-label">▸ 캐릭터 커스텀</label>
+          <!-- 성별 토글 -->
+          <div class="form-group" style="margin-bottom:.7rem">
+            <span class="char-opt-label">성별</span>
+            <div class="gender-row">
+              <button class="gender-btn active" id="gender-m" onclick="selectGender('m',this)">♂ 남자</button>
+              <button class="gender-btn"        id="gender-f" onclick="selectGender('f',this)">♀ 여자</button>
+            </div>
+          </div>
+          <div class="char-custom-grid">
+            <div>
+              <span class="char-opt-label">머리카락</span>
+              <select class="char-sel" id="sel-hair" onchange="drawSprite();updateCard()">
+                <option value="short">단발 (짧은)</option>
+                <option value="medium">중단발</option>
+                <option value="long">긴 머리</option>
+                <option value="verylong">초장발</option>
+                <option value="spiky">뾰족 머리</option>
+                <option value="spiky2">뿔 뾰족</option>
+                <option value="bob">보브컷</option>
+                <option value="ponytail">포니테일</option>
+                <option value="twintail">양갈래</option>
+                <option value="braid">땋은 머리</option>
+                <option value="afro">아프로</option>
+                <option value="mohawk">모히칸</option>
+                <option value="hat">캡모자</option>
+                <option value="bald">민머리</option>
+              </select>
+            </div>
+            <div>
+              <span class="char-opt-label">머리 색상</span>
+              <select class="char-sel" id="sel-haircolor" onchange="drawSprite();updateCard()">
+                <option value="#2c1810">검정</option>
+                <option value="#8B4513">갈색</option>
+                <option value="#DAA520">금발</option>
+                <option value="#C0C0C0">회색</option>
+                <option value="#FF4500">빨강</option>
+                <option value="#4169E1">파랑</option>
+                <option value="#9400D3">보라</option>
+              </select>
+            </div>
+            <div>
+              <span class="char-opt-label">피부 톤</span>
+              <select class="char-sel" id="sel-skin" onchange="drawSprite();updateCard()">
+                <option value="#f4c89a">밝은 피부</option>
+                <option value="#d4935a">갈색 피부</option>
+                <option value="#8B6650">다크 피부</option>
+                <option value="#ffe0e0">분홍 피부</option>
+              </select>
+            </div>
+            <div>
+              <span class="char-opt-label">하의 색상</span>
+              <select class="char-sel" id="sel-pants" onchange="drawSprite();updateCard()">
+                <option value="#3a4a7a">진남 (밝게)</option>
+                <option value="#2a5a2a">진초록 (밝게)</option>
+                <option value="#6a2a2a">진빨강 (밝게)</option>
+                <option value="#4a4a4a">회색</option>
+                <option value="#7a6a3a">카키</option>
+                <option value="#e8e8e8">흰색</option>
+                <option value="#8B4513">갈색</option>
+              </select>
+            </div>
+            <div>
+              <span class="char-opt-label">표정</span>
+              <select class="char-sel" id="sel-face" onchange="drawSprite();updateCard()">
+                <option value="normal">기본</option>
+                <option value="happy">웃음</option>
+                <option value="cool">쿨</option>
+                <option value="angry">화남</option>
+                <option value="glasses">안경</option>
+              </select>
+            </div>
+            <div>
+              <span class="char-opt-label">액세서리</span>
+              <select class="char-sel" id="sel-acc" onchange="drawSprite();updateCard()">
+                <option value="job">직업 기본</option>
+                <option value="none">없음</option>
+                <option value="crown">왕관</option>
+                <option value="halo">후광</option>
+                <option value="scarf">스카프</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">▸ 레벨 (LEVEL)</label>
+          <input class="form-input" id="inp-level" type="number" min="1" max="99" value="1" style="width:72px">
+        </div>
+      </div>
+
+      <!-- CARD THEME -->
+      <div class="pixel-panel" data-label="CARD THEME">
+        <div class="form-group">
+          <label class="form-label">▸ 배경 테마</label>
+          <div class="theme-grid" id="theme-grid"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">▸ 테두리 색상</label>
+          <div class="color-row" id="border-color-picker"></div>
+        </div>
+
+      </div>
+
+      <button class="gen-btn" onclick="generateCard()">▶ GENERATE CARD ◀</button>
+    </div>
+
+    <!-- 오른쪽: 카드 미리보기 -->
+    <div class="preview-sticky">
+      <div class="mobile-preview-label">▸ CARD PREVIEW</div>
+      <div id="card-output">
+        <div class="card-header-bar">
+          <span class="card-header-title">PIXEL CARD</span>
+          <span class="card-lv">LV.01</span>
+        </div>
+        <div class="corner corner-tl"></div>
+        <div class="corner corner-tr"></div>
+        <div class="corner corner-bl"></div>
+        <div class="corner corner-br"></div>
+        <div class="card-char-area">
+          <canvas id="sprite-canvas" width="64" height="64"
+            style="display:block;width:112px;height:112px;margin-bottom:8px;image-rendering:pixelated;"></canvas>
+          <div class="card-name" id="card-name-el">YOUR NAME</div>
+          <div class="card-job-badge job-qa" id="card-job-el">🔍 QA ENGINEER</div>
+          <div class="card-company" id="card-company-el">[ GUILD NAME ]</div>
+          <div class="card-contact" id="card-contact-el">contact@email.com</div>
+          <div class="card-motto-inline" id="card-motto-el">"버그는 내가 잡는다"</div>
+          <div class="card-stats" id="card-stats-el"></div>
+        </div>
+        <div class="card-footer">
+          <span class="card-rarity rarity-rare" id="card-rarity-el" style="margin:0 auto;">◆ RARE</span>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="action-btn primary" onclick="downloadCard()">▼ PNG 저장</button>
+        <button class="action-btn" onclick="copyLink()">⧉ 링크 복사</button>
+        <button class="action-btn" onclick="randomCard()">⟳ 랜덤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<canvas id="export-canvas" width="480" height="640" style="display:none"></canvas>
+
+<script>
+// ===== 테마 =====
+let isDark = false;
+function toggleTheme(){
+  isDark=!isDark;
+  document.documentElement.setAttribute('data-theme',isDark?'dark':'light');
+  document.getElementById('theme-icon').textContent=isDark?'☀️':'🌙';
+  document.getElementById('theme-label').textContent=isDark?'LIGHT':'DARK';
+  localStorage.setItem('pixelcard-theme',isDark?'dark':'light');
+}
+(function(){
+  const s=localStorage.getItem('pixelcard-theme');
+  if(s==='dark'){isDark=true;document.documentElement.setAttribute('data-theme','dark');
+    document.getElementById('theme-icon').textContent='☀️';document.getElementById('theme-label').textContent='LIGHT';}
+})();
+
+// ===== 데이터 =====
+const JOB_PRESETS = {
+  QA_ENG:     {icon:'🔍',label:'QA ENGINEER',   color:'#1a8a82',stats:['DETECT','LOGIC','PATIENCE','SPEED','CHAOS']},
+  DEVELOPER:  {icon:'💻',label:'DEVELOPER',      color:'#6c3fc5',stats:['CODING','LOGIC','DEBUG','SPEED','COFFEE']},
+  DESIGNER:   {icon:'🎨',label:'DESIGNER',       color:'#d63070',stats:['SENSE','CREATE','PIXEL','TOOL','VIBE']},
+  PM:         {icon:'📋',label:'PLANNER',         color:'#c06010',stats:['PLAN','TALK','LEADER','STRESS','DOCS']},
+  DATA:       {icon:'📊',label:'DATA ANALYST',   color:'#2a7a30',stats:['MATH','SQL','INSIGHT','PYTHON','CHART']},
+  ACCOUNTANT: {icon:'💼',label:'ACCOUNTANT',     color:'#8B6914',stats:['TAX','FINANCE','LAW','EXCEL','AUDIT']},
+  DOCTOR:     {icon:'🏥',label:'MEDICAL',        color:'#1a6a8a',stats:['DIAGNOSE','CARE','SKILL','STAMINA','CALM']},
+  MARKETER:   {icon:'📣',label:'MARKETER',       color:'#b03080',stats:['BRAND','SNS','DATA','COPY','TREND']},
+  TEACHER:    {icon:'📚',label:'EDUCATOR',       color:'#2060a0',stats:['TEACH','PATIENCE','KNOW','EXPLAIN','INSPIRE']},
+  CREATOR:    {icon:'🎬',label:'CREATOR',        color:'#c04040',stats:['EDIT','IDEA','TREND','COLLAB','VIRAL']},
+  SALES:      {icon:'🤝',label:'SALES',          color:'#207050',stats:['TALK','CHARM','CLOSE','FOLLOW','QUOTA']},
+  OTHER:      {icon:'⚔️',label:'ADVENTURER',     color:'#c8860a',stats:['POWER','AGILE','IDEA','LUCK','PASSION']},
+};
+
+// 이모지 피커 데이터
+const EMOJI_GROUPS = [
+  {label:'직업·업무', emojis:['🔍','💻','🎨','📋','📊','💼','🏥','📣','📚','🎬','🤝','⚔️','🔧','🏗️','✈️','🚀','🎯','🔬','⚖️','🎓','🛡️','🍳','🎵','📸','🌐']},
+  {label:'사람·표정', emojis:['👤','🧑','👩','👨','🧑‍💻','👩‍💻','👨‍💻','🧑‍🎨','👩‍🎨','🧑‍🏫','👩‍🔬','👨‍🔬','🧑‍⚕️','🦸','🦹','🧙','🧝','🥷','👷','🕵️']},
+  {label:'심볼·기타', emojis:['⭐','🌟','✨','💫','🔥','💥','❄️','🌈','💎','🏆','🥇','🎮','🎲','🃏','🎭','🌸','🍀','🦋','🐉','🦊']},
+];
+
+const CHAR_COLORS=['#c8860a','#d63070','#1a8a82','#6c3fc5','#2a7a30','#c06010','#2070c0','#c03030','#8030a0','#207060'];
+
+// ===== 카드 테마 데이터 =====
+const CARD_THEMES = [
+  // ★ 기본값: 업로드 이미지와 동일한 크림/베이지 + 골드 테두리
+  {id:'classic', name:'CLASSIC', grad:['#fdf6e3','#f5e6c0','#e8d0a0'], border:'#c8860a'},
+  {id:'night',   name:'NIGHT',   grad:['#1e1e36','#1a2848','#143060'], border:'#f6d860'},
+  {id:'forest',  name:'FOREST',  grad:['#0d2010','#1a3a18','#0a2808'], border:'#6bcb77'},
+  {id:'sunset',  name:'SUNSET',  grad:['#3a1020','#6a2030','#c05030'], border:'#ffa62b'},
+  {id:'ocean',   name:'OCEAN',   grad:['#0a1a30','#0a2848','#104060'], border:'#4ecdc4'},
+  {id:'sakura',  name:'SAKURA',  grad:['#f5e0e8','#f0c0d0','#e8a0b8'], border:'#d63070'},
+  {id:'gold',    name:'GOLD',    grad:['#2a1a00','#4a3000','#6a4800'], border:'#f6d860'},
+  {id:'purple',  name:'PURPLE',  grad:['#1a0a2e','#2a1048','#3a1860'], border:'#a78bfa'},
+  {id:'mint',    name:'MINT',    grad:['#e0f8f0','#c0f0e0','#a0e8d0'], border:'#1a8a82'},
+  {id:'lava',    name:'LAVA',    grad:['#2a0800','#4a1000','#8a2000'], border:'#ff6b6b'},
+  {id:'sky',     name:'SKY',     grad:['#c0e0f8','#a0c8f0','#80b0e8'], border:'#2070c0'},
+  {id:'mono',    name:'MONO',    grad:['#181818','#282828','#383838'], border:'#c0c0c0'},
+  {id:'candy',   name:'CANDY',   grad:['#f8e0f0','#f0c8e8','#e8a8d8'], border:'#ff6b9d'},
+];
+
+const BORDER_COLORS = [
+  '#c8860a','#f6d860','#ff6b9d','#4ecdc4','#a78bfa','#6bcb77',
+  '#ffa62b','#60a5fa','#ff6b6b','#e879f9','#c0c0c0','#ffffff',
+];
+
+let currentTheme = CARD_THEMES[0];   // CLASSIC이 기본값
+let currentBorderColor = '#c8860a';  // 골드 테두리가 기본값
+
+function buildThemeGrid(){
+  const grid = document.getElementById('theme-grid');
+  grid.innerHTML = '';
+  CARD_THEMES.forEach((t,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'theme-btn' + (i===0?' active':'');
+    btn.style.background = `linear-gradient(135deg,${t.grad[0]},${t.grad[1]},${t.grad[2]})`;
+    btn.innerHTML = `<span>${t.name}</span>`;
+    btn.onclick = () => selectTheme(t, btn);
+    grid.appendChild(btn);
+  });
+}
+
+function buildBorderColorPicker(){
+  const row = document.getElementById('border-color-picker');
+  row.innerHTML = '';
+  BORDER_COLORS.forEach((c,i) => {
+    const dot = document.createElement('div');
+    dot.className = 'color-dot' + (i===0?' active':'');
+    dot.style.background = c;
+    dot.style.boxShadow = '2px 2px 0 var(--dot-shadow)';
+    dot.onclick = () => selectBorderColor(c, dot);
+    row.appendChild(dot);
+  });
+}
+
+function selectTheme(t, btn){
+  currentTheme = t;
+  currentBorderColor = t.border;
+  document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // 테두리 색도 동기화
+  document.querySelectorAll('#border-color-picker .color-dot').forEach(d=>d.classList.remove('active'));
+  const idx = BORDER_COLORS.indexOf(t.border);
+  if(idx>=0) document.querySelectorAll('#border-color-picker .color-dot')[idx]?.classList.add('active');
+  applyCardTheme();
+}
+
+function selectBorderColor(c, dot){
+  currentBorderColor = c;
+  document.querySelectorAll('#border-color-picker .color-dot').forEach(d=>d.classList.remove('active'));
+  dot.classList.add('active');
+  applyCardTheme();
+}
+
+function isLightColor(hex){
+  // 밝은 색상 판별 (luminance > 0.5)
+  const r=parseInt(hex.slice(1,3),16)/255;
+  const g=parseInt(hex.slice(3,5),16)/255;
+  const b=parseInt(hex.slice(5,7),16)/255;
+  return 0.299*r+0.587*g+0.114*b > 0.55;
+}
+
+function applyCardTheme(){
+  const card = document.getElementById('card-output');
+  const t = currentTheme;
+  card.style.background = `linear-gradient(135deg,${t.grad[0]},${t.grad[1]},${t.grad[2]})`;
+  card.style.borderColor = currentBorderColor;
+  // 헤더바/코너 색상 연동
+  document.querySelector('.card-header-bar').style.background = currentBorderColor;
+  document.querySelectorAll('.corner').forEach(c=>c.style.borderColor = currentBorderColor);
+  // 헤더 텍스트: 테두리색이 밝으면 검정, 어두우면 흰색
+  const headerTextColor = isLightColor(currentBorderColor) ? '#000' : '#fff';
+  document.querySelectorAll('.card-header-title,.card-lv').forEach(el=>el.style.color=headerTextColor);
+  // 카드 내부 텍스트: 배경이 밝은 테마면 accent 고정, 어두운 테마면 더 밝게
+  const bgLight = isLightColor(t.grad[1]);
+  const nameEl = document.getElementById('card-name-el');
+  if(nameEl){
+    nameEl.style.color = bgLight ? currentBorderColor : (isLightColor(currentBorderColor)?currentBorderColor:'#fff');
+  }
+  // 카드 스탯 구분선 색
+  const sepColor = bgLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.14)';
+  document.querySelectorAll('.card-stats').forEach(el=>el.style.borderTopColor=sepColor);
+  // 모토 색상
+  const mottoEl = document.getElementById('card-motto-el');
+  if(mottoEl) mottoEl.style.color = bgLight ? currentBorderColor : lighten(currentBorderColor,40);
+  // 푸터
+  const footerEl = document.querySelector('.card-footer');
+  if(footerEl) footerEl.style.background = bgLight ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.4)';
+}
+
+const RARITY=[
+  {min:0,  label:'COMMON',    cls:'rarity-common',   sym:'◇'},
+  {min:200,label:'RARE',      cls:'rarity-rare',     sym:'◆'},
+  {min:300,label:'EPIC',      cls:'rarity-epic',     sym:'★'},
+  {min:380,label:'LEGENDARY', cls:'rarity-legendary',sym:'✦'},
+];
+
+// 직업별 기본 외형 (전역) — hair/hairColor/skin/pants/face/acc 모두 포함
+// 남성(m) / 여성(f) 각각 정의
+const JOB_LOOKS = {
+  // acc: UI selector에 표시할 값('none','crown','halo','scarf')
+  // jobAcc: 직업 고유 아이템 (drawSprite에서 항상 그림, acc와 무관)
+  QA_ENG:    { m:{hair:'short',   hairColor:'#2c1810',skin:'#f4c89a',pants:'#3a4a7a',face:'glasses',acc:'none',jobAcc:'magnifier'},
+               f:{hair:'short',   hairColor:'#8B4513',skin:'#ffe0e0',pants:'#6a2a2a',face:'glasses',acc:'none',jobAcc:'magnifier'} },
+  DEVELOPER: { m:{hair:'spiky',   hairColor:'#2c1810',skin:'#f4c89a',pants:'#2a5a2a',face:'cool',   acc:'none',jobAcc:'headphone'},
+               f:{hair:'twintail',hairColor:'#9400D3',skin:'#f4c89a',pants:'#3a4a7a',face:'cool',   acc:'none',jobAcc:'headphone'} },
+  DESIGNER:  { m:{hair:'long',    hairColor:'#8B4513',skin:'#f4c89a',pants:'#2a5a2a',face:'happy',  acc:'none',jobAcc:'beret'},
+               f:{hair:'long',    hairColor:'#DAA520',skin:'#ffe0e0',pants:'#6a2a2a',face:'happy',  acc:'none',jobAcc:'beret'} },
+  PM:        { m:{hair:'short',   hairColor:'#2c1810',skin:'#d4935a',pants:'#3a4a7a',face:'normal', acc:'none',jobAcc:'headset'},
+               f:{hair:'long',    hairColor:'#8B4513',skin:'#d4935a',pants:'#6a2a2a',face:'normal', acc:'none',jobAcc:'headset'} },
+  DATA:      { m:{hair:'short',   hairColor:'#C0C0C0',skin:'#f4c89a',pants:'#3a4a7a',face:'glasses',acc:'none',jobAcc:'chart'},
+               f:{hair:'short',   hairColor:'#4169E1',skin:'#f4c89a',pants:'#6a2a2a',face:'glasses',acc:'none',jobAcc:'chart'} },
+  ACCOUNTANT:{ m:{hair:'short',   hairColor:'#2c1810',skin:'#f4c89a',pants:'#4a4a4a',face:'normal', acc:'none',jobAcc:'tie'},
+               f:{hair:'long',    hairColor:'#2c1810',skin:'#f4c89a',pants:'#3a4a7a',face:'normal', acc:'none',jobAcc:'tie'} },
+  DOCTOR:    { m:{hair:'short',   hairColor:'#2c1810',skin:'#f4c89a',pants:'#e8e8e8',face:'normal', acc:'none',jobAcc:'stethoscope'},
+               f:{hair:'long',    hairColor:'#2c1810',skin:'#ffe0e0',pants:'#e8e8e8',face:'normal', acc:'none',jobAcc:'stethoscope'} },
+  MARKETER:  { m:{hair:'short',   hairColor:'#8B4513',skin:'#d4935a',pants:'#3a4a7a',face:'happy',  acc:'none',jobAcc:'megaphone'},
+               f:{hair:'long',    hairColor:'#FF4500',skin:'#ffe0e0',pants:'#6a2a2a',face:'happy',  acc:'none',jobAcc:'megaphone'} },
+  TEACHER:   { m:{hair:'short',   hairColor:'#8B4513',skin:'#f4c89a',pants:'#3a4a7a',face:'normal', acc:'none',jobAcc:'book'},
+               f:{hair:'long',    hairColor:'#DAA520',skin:'#f4c89a',pants:'#6a2a2a',face:'happy',  acc:'none',jobAcc:'book'} },
+  CREATOR:   { m:{hair:'spiky',   hairColor:'#FF4500',skin:'#f4c89a',pants:'#2a5a2a',face:'cool',   acc:'none',jobAcc:'camera'},
+               f:{hair:'twintail',hairColor:'#9400D3',skin:'#ffe0e0',pants:'#6a2a2a',face:'cool',   acc:'none',jobAcc:'camera'} },
+  SALES:     { m:{hair:'short',   hairColor:'#2c1810',skin:'#d4935a',pants:'#4a4a4a',face:'happy',  acc:'none',jobAcc:'tie'},
+               f:{hair:'long',    hairColor:'#2c1810',skin:'#d4935a',pants:'#3a4a7a',face:'happy',  acc:'none',jobAcc:'none'} },
+  OTHER:     { m:{hair:'spiky',   hairColor:'#2c1810',skin:'#f4c89a',pants:'#3a4a7a',face:'normal', acc:'none',jobAcc:'none'},
+               f:{hair:'long',    hairColor:'#9400D3',skin:'#ffe0e0',pants:'#6a2a2a',face:'happy',  acc:'none',jobAcc:'none'} },
+};
+
+// UI 셀렉터에 외형 값 동기화
+function applyLookToUI(look){
+  document.getElementById('sel-hair').value      = look.hair;
+  document.getElementById('sel-haircolor').value = look.hairColor;
+  document.getElementById('sel-skin').value      = look.skin;
+  document.getElementById('sel-pants').value     = look.pants;
+  document.getElementById('sel-face').value      = look.face;
+  document.getElementById('sel-acc').value       = look.acc; // 항상 none/crown/halo/scarf 중 하나
+  // 직업 고유 액세서리는 전역에 저장해 drawSprite에서 항상 그림
+  currentJobAcc = look.jobAcc || 'none';
+}
+
+let currentJob='QA_ENG';
+let currentJobAcc='magnifier'; // 직업 고유 아이템
+let currentColor=CHAR_COLORS[0];
+let statValues={};
+
+// ===== 초기화 =====
+function init(){
+  document.getElementById('inp-job-name').value='QA ENGINEER';
+  buildEmojiPicker();
+  buildThemeGrid();
+  buildBorderColorPicker();
+  // 초기 직업(QA_ENG) 남자 외형을 UI에 반영
+  const initLook=JOB_LOOKS['QA_ENG'];
+  if(initLook) applyLookToUI(initLook['m']);
+  buildStatSliders();
+  buildColorPicker();
+  spawnParticles();
+  drawSprite();
+  updateCard();
+  applyCardTheme();
+  // 피커 외부 클릭 시 닫기
+  document.addEventListener('click', e=>{
+    if(!e.target.closest('.emoji-picker-wrap')) closeEmojiPicker();
+  });
+}
+
+// ===== 이모지 피커 =====
+function buildEmojiPicker(){
+  const picker=document.getElementById('emoji-picker');
+  picker.innerHTML='';
+  EMOJI_GROUPS.forEach(group=>{
+    const lbl=document.createElement('div');
+    lbl.className='emoji-cat-label'; lbl.textContent=group.label;
+    picker.appendChild(lbl);
+    group.emojis.forEach(em=>{
+      const btn=document.createElement('button');
+      btn.className='ep-btn'; btn.textContent=em;
+      btn.onclick=e=>{e.stopPropagation();selectEmoji(em);};
+      picker.appendChild(btn);
+    });
+  });
+}
+
+function toggleEmojiPicker(e){
+  e.stopPropagation();
+  const picker=document.getElementById('emoji-picker');
+  picker.classList.toggle('open');
+  if(picker.classList.contains('open')){
+    // 모바일: 화면 밖으로 삐져나가는지 확인 후 위치 보정
+    requestAnimationFrame(()=>{
+      const rect=picker.getBoundingClientRect();
+      const vw=window.innerWidth;
+      if(rect.right>vw-8){
+        picker.style.left='auto';
+        picker.style.right='0';
+      } else {
+        picker.style.left='0';
+        picker.style.right='auto';
+      }
+      // 아래로 공간 없으면 위로
+      if(rect.bottom>window.innerHeight-8){
+        picker.style.top='auto';
+        picker.style.bottom='calc(100% + 4px)';
+      } else {
+        picker.style.top='calc(100% + 4px)';
+        picker.style.bottom='auto';
+      }
+    });
+  }
+}
+
+function closeEmojiPicker(){
+  document.getElementById('emoji-picker').classList.remove('open');
+}
+
+function selectEmoji(em){
+  document.getElementById('job-icon-btn').textContent=em;
+  closeEmojiPicker();
+  updateCard();
+}
+
+function getCurrentIcon(){
+  return document.getElementById('job-icon-btn').textContent.trim();
+}
+
+function buildStatSliders(){
+  const container=document.getElementById('stat-sliders');
+  container.innerHTML='';
+  const preset=JOB_PRESETS[currentJob];
+  const stats=preset?preset.stats:['SKILL1','SKILL2','SKILL3','SKILL4','SKILL5'];
+  stats.forEach(stat=>{
+    const val=statValues[stat]||Math.floor(Math.random()*40+40);
+    statValues[stat]=val;
+    container.innerHTML+=`<div class="stat-row">
+      <span class="stat-name">${stat}</span>
+      <input type="range" class="stat-slider" min="1" max="99" value="${val}" oninput="onStat('${stat}',this.value)" id="slider-${stat}">
+      <span class="stat-val" id="val-${stat}">${val}</span>
+    </div>`;
+  });
+}
+
+function buildColorPicker(){
+  const c=document.getElementById('color-picker');
+  c.innerHTML='';
+  CHAR_COLORS.forEach((col,i)=>{
+    c.innerHTML+=`<div class="color-dot${i===0?' active':''}" style="background:${col}" onclick="selectColor(this,'${col}')"></div>`;
+  });
+}
+
+function spawnParticles(){
+  const c=document.getElementById('particles');
+  const sym=['✦','◆','◇','★','▸','▹','♦','♢'];
+  // 모바일에서는 파티클 수 줄여 성능 최적화
+  const count=window.innerWidth<640?8:18;
+  for(let i=0;i<count;i++){
+    const p=document.createElement('div'); p.className='p';
+    p.textContent=sym[Math.floor(Math.random()*sym.length)];
+    p.style.left=Math.random()*100+'vw';
+    p.style.color=CHAR_COLORS[Math.floor(Math.random()*CHAR_COLORS.length)];
+    p.style.animationDuration=(8+Math.random()*12)+'s';
+    p.style.animationDelay=(-Math.random()*15)+'s';
+    p.style.fontSize=(8+Math.random()*10)+'px';
+    c.appendChild(p);
+  }
+}
+
+// ===== 스프라이트 =====
+function darken(hex,amt){
+  let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  r=Math.max(0,r-amt);g=Math.max(0,g-amt);b=Math.max(0,b-amt);
+  return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+function lighten(hex,amt){
+  let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  r=Math.min(255,r+amt);g=Math.min(255,g+amt);b=Math.min(255,b+amt);
+  return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+let currentGender='m';
+
+function selectGender(g, btn){
+  currentGender=g;
+  document.querySelectorAll('.gender-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // 현재 직업의 성별별 외형으로 UI 업데이트
+  const look=JOB_LOOKS[currentJob];
+  if(look) applyLookToUI(look[g]||look.m);
+  drawSprite(); updateCard();
+}
+
+function getCharOpts(){
+  return{
+    gender:currentGender,
+    hair:document.getElementById('sel-hair').value,
+    hairColor:document.getElementById('sel-haircolor').value,
+    skin:document.getElementById('sel-skin').value,
+    pants:document.getElementById('sel-pants').value,
+    face:document.getElementById('sel-face').value,
+    acc:document.getElementById('sel-acc').value,
+  };
+}
+
+function drawSprite(canvas,color,job){
+  const c=canvas||document.getElementById('sprite-canvas');
+  const ctx=c.getContext('2d');
+  const col=color||currentColor;
+  const j=job||currentJob;
+  const opts=getCharOpts();
+  ctx.clearRect(0,0,64,64);
+
+  const skin=opts.skin;
+  const skinD=darken(skin,50);
+  const hair=opts.hairColor;
+  const hairL=lighten(hair,35);
+  const shirt=col, shirtD=darken(col,45);
+  // ③ 바지: 항상 lighten 적용해서 다크모드에서도 구분 가능
+  const pantsRaw=opts.pants;
+  const pants=lighten(pantsRaw,30);   // 기본값보다 30 밝게
+  const pantsD=darken(pantsRaw,10);   // 음영은 원래값보다 약간 어둡게
+  const shoeC=darken(pantsRaw,30);
+  const blk='#111', wht='#fff';
+  const isFemale=(opts.gender==='f');
+
+  function px(x,y,w,h,cl){ctx.fillStyle=cl;ctx.fillRect(x*4,y*4,w*4,h*4);}
+
+  // 그림자
+  ctx.fillStyle='rgba(0,0,0,0.15)';ctx.fillRect(isFemale?8:10,58,isFemale?48:44,5);
+
+  // 외형은 UI 셀렉터에서 직접 읽음 (selectJobPreset/selectGender에서 applyLookToUI로 동기화됨)
+  const hairStyle = opts.hair;
+  const faceStyle = opts.face;
+  const accStyle  = opts.acc;
+
+  // ============ 머리카락 (14종) ============
+  if(hairStyle==='bald'){
+    // 민머리: 두피 하이라이트
+    ctx.fillStyle=lighten(skin,20); ctx.fillRect(22,10,10,4);
+    ctx.fillStyle=lighten(skin,8);  ctx.fillRect(18,14,4,3); ctx.fillRect(42,14,4,3);
+
+  } else if(hairStyle==='hat'){
+    // 캡모자: 챙 + 몸통 + 버튼
+    ctx.fillStyle=darken(col,40); ctx.fillRect(12,16,40,4); // 챙
+    px(4,1,8,1,col); px(4,2,8,3,col);                       // 모자 몸통
+    ctx.fillStyle=lighten(col,25); ctx.fillRect(22,8,12,4); // 하이라이트
+    ctx.fillStyle=darken(col,50);  ctx.fillRect(30,5,4,3);  // 버튼
+
+  } else if(hairStyle==='spiky'){
+    // 뾰족: 앞으로 솟은 스파이크
+    px(5,0,1,3,hair); px(7,0,1,4,hairL); px(9,0,1,3,hair); px(11,0,1,3,hairL);
+    px(4,2,8,1,hair); px(4,3,1,3,hair); px(11,3,1,3,hair);
+    ctx.fillStyle=hairL; ctx.fillRect(22,8,4,4); // 앞 하이라이트
+
+  } else if(hairStyle==='spiky2'){
+    // 뿔 뾰족: 양쪽 뿔 스타일
+    px(4,0,2,3,hair); px(10,0,2,3,hair);        // 좌우 뿔
+    px(4,2,8,1,hair);                            // 윗 라인
+    px(4,3,1,4,hair); px(11,3,1,4,hair);         // 측면
+    ctx.fillStyle=hairL; ctx.fillRect(18,4,6,4); ctx.fillRect(38,4,6,4); // 뿔 하이라이트
+
+  } else if(hairStyle==='bob'){
+    // 보브컷: 턱 선에서 딱 끊기는 단발
+    px(5,1,6,1,hair); px(4,2,8,1,hair);
+    px(4,3,1,6,hair); px(11,3,1,6,hair);         // 측면 길게
+    px(4,8,8,1,hair);                            // 하단 라인 (보브 라인)
+    ctx.fillStyle=hairL; ctx.fillRect(22,8,12,4); // 내부 하이라이트
+    ctx.fillStyle=darken(hair,20); ctx.fillRect(16,32,4,2); ctx.fillRect(44,32,4,2); // 볼 라인
+
+  } else if(hairStyle==='medium'){
+    // 중단발: 목 중간까지
+    px(5,1,6,1,hair); px(4,2,8,1,hair);
+    px(3,3,2,8,hair); px(4,3,1,5,hair);
+    px(11,3,1,5,hair); px(11,3,2,8,hair);
+    ctx.fillStyle=hairL; ctx.fillRect(22,8,8,4);
+
+  } else if(hairStyle==='long'){
+    // 긴 머리: 어깨 아래
+    px(5,1,6,1,hair); px(4,2,8,1,hair);
+    px(3,3,2,9,hair); px(4,3,1,5,hair); px(11,3,1,5,hair); px(11,3,2,9,hair);
+    px(3,10,2,2,hairL); px(11,10,2,2,hairL);
+    ctx.fillStyle=hairL; ctx.fillRect(22,8,10,4);
+
+  } else if(hairStyle==='verylong'){
+    // 초장발: 허리까지
+    px(5,1,6,1,hair); px(4,2,8,1,hair);
+    px(2,3,3,13,hair); px(4,3,1,5,hair); px(11,3,1,5,hair); px(11,3,3,13,hair);
+    px(2,14,3,2,hairL); px(11,14,3,2,hairL);
+    ctx.fillStyle=hairL; ctx.fillRect(22,8,10,4);
+    // 끝부분 웨이브
+    ctx.fillStyle=darken(hair,15);
+    ctx.fillRect(8,56,8,4); ctx.fillRect(48,56,8,4);
+
+  } else if(hairStyle==='ponytail'){
+    // 포니테일: 뒤로 묶은 머리
+    px(5,1,6,1,hair); px(4,2,8,1,hair);
+    px(4,3,1,5,hair); px(11,3,1,3,hair);
+    // 묶음 고무줄
+    ctx.fillStyle='#ff6090'; ctx.fillRect(44,16,4,4);
+    // 꼬리
+    ctx.fillStyle=hair; ctx.fillRect(46,20,6,20);
+    ctx.fillStyle=hairL; ctx.fillRect(47,22,3,14);
+    ctx.fillStyle=darken(hair,20); ctx.fillRect(46,38,8,6);
+
+  } else if(hairStyle==='twintail'){
+    // 양갈래: 리본 포인트
+    px(5,1,6,1,hair); px(4,2,8,1,hair);
+    px(4,3,1,5,hair); px(11,3,1,5,hair);
+    px(2,4,2,6,hair); px(12,4,2,6,hair);
+    px(2,10,2,2,hairL); px(12,10,2,2,hairL);
+    // 리본
+    ctx.fillStyle='#ff6090'; ctx.fillRect(14,16,6,4); ctx.fillRect(44,16,6,4);
+
+  } else if(hairStyle==='braid'){
+    // 땋은 머리: 한쪽으로 넘긴 브레이드
+    px(5,1,6,1,hair); px(4,2,8,1,hair);
+    px(4,3,1,5,hair); px(11,3,1,3,hair);
+    // 땋은 부분 (지그재그)
+    for(let bi=0;bi<6;bi++){
+      ctx.fillStyle = bi%2===0 ? hair : hairL;
+      ctx.fillRect(44+bi%2*4, 14+bi*6, 6, 6);
+    }
+    ctx.fillStyle='#f6d860'; ctx.fillRect(44,50,8,4); // 끝 리본
+
+  } else if(hairStyle==='afro'){
+    // 아프로: 둥그런 볼륨감
+    ctx.fillStyle=hair;
+    ctx.beginPath(); ctx.arc(32,14,20,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=lighten(hair,25);
+    ctx.beginPath(); ctx.arc(26,10,7,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=darken(hair,20);
+    ctx.beginPath(); ctx.arc(38,18,5,0,Math.PI*2); ctx.fill();
+    // 측면 덮어쓰기 (피부 노출)
+    ctx.fillStyle=skin; ctx.fillRect(0,24,16,16); ctx.fillRect(48,24,16,16);
+
+  } else if(hairStyle==='mohawk'){
+    // 모히칸: 가운데만 세움
+    px(7,0,2,5,hairL); // 중앙 밝은 볏
+    px(6,1,4,4,hair);
+    ctx.fillStyle=darken(hair,30);
+    ctx.fillRect(24,0,8,4); // 양쪽 어두운 면
+    ctx.fillRect(36,0,4,4);
+    // 측면 삭발 느낌
+    ctx.fillStyle=lighten(skin,10); ctx.fillRect(0,12,16,14); ctx.fillRect(48,12,16,14);
+
+  } else {
+    // short 기본: 깔끔한 단발
+    px(5,1,6,1,hair); px(4,2,8,1,hair);
+    px(4,3,1,5,hair); px(11,3,1,5,hair);
+    ctx.fillStyle=hairL; ctx.fillRect(22,8,8,4); // 하이라이트
+    if(!isFemale){ px(4,2,1,1,hair); px(11,2,1,1,hair); }
+  }
+
+  // ============ 얼굴 ============
+  for(let fy=3;fy<9;fy++) for(let fx=5;fx<11;fx++) px(fx,fy,1,1,skin);
+  px(4,4,1,4,skin); px(11,4,1,4,skin);
+  px(4,8,8,1,skinD);
+  // 여자: 볼터치
+  if(isFemale){
+    ctx.fillStyle='rgba(255,150,150,0.4)';
+    ctx.fillRect(18,24,6,4); ctx.fillRect(40,24,6,4);
+  }
+
+  // ============ 표정 ============
+  if(faceStyle==='happy'){
+    px(6,5,1,1,blk); px(9,5,1,1,blk);
+    // 웃는 입
+    ctx.fillStyle='#c04040';ctx.fillRect(22,28,20,4);
+    ctx.fillStyle='#ff9999';ctx.fillRect(24,28,16,4);
+    ctx.fillStyle=blk;ctx.fillRect(22,28,2,2);ctx.fillRect(38,28,2,2);
+    // 볼터치
+    ctx.fillStyle='rgba(255,120,120,0.45)';ctx.fillRect(18,24,6,4);ctx.fillRect(40,24,6,4);
+  } else if(faceStyle==='cool'){
+    ctx.fillStyle='#1a1a1a';ctx.fillRect(20,20,12,7);ctx.fillRect(32,20,12,7);
+    ctx.fillStyle='#333';ctx.fillRect(28,22,4,4);
+    ctx.fillStyle='#555';ctx.fillRect(22,20,4,3);ctx.fillRect(36,20,4,3);
+    ctx.fillStyle='rgba(100,200,255,0.25)';ctx.fillRect(20,20,12,7);ctx.fillRect(32,20,12,7);
+  } else if(faceStyle==='angry'){
+    ctx.fillStyle='#7a1010';ctx.fillRect(20,16,12,3);ctx.fillRect(32,16,12,3);
+    ctx.fillStyle='#333';ctx.fillRect(22,16,10,3);ctx.fillRect(34,16,10,3);
+    px(6,5,1,1,blk); px(9,5,1,1,blk);
+    ctx.fillStyle='#7a1010';ctx.fillRect(24,28,16,3);
+  } else if(faceStyle==='glasses'){
+    px(6,5,1,1,blk); px(9,5,1,1,blk);
+    ctx.strokeStyle='#777';ctx.lineWidth=2;
+    ctx.strokeRect(20,20,12,8);ctx.strokeRect(32,20,12,8);
+    ctx.beginPath();ctx.moveTo(32,24);ctx.lineTo(32,24);ctx.stroke();
+    ctx.fillStyle='rgba(200,230,255,0.2)';ctx.fillRect(20,20,12,8);ctx.fillRect(32,20,12,8);
+  } else {
+    px(6,5,1,1,blk); px(9,5,1,1,blk);
+  }
+
+  // ============ 선택 액세서리 (UI 셀렉터 — crown/halo/scarf만) ============
+  if(accStyle==='crown'){
+    px(5,0,1,2,'#f6d860');px(7,0,1,3,'#f6d860');px(9,0,1,3,'#f6d860');px(11,0,1,2,'#f6d860');
+    px(4,2,8,1,'#f6d860');
+    ctx.fillStyle='#ff4444';ctx.fillRect(24,4,4,4);
+    ctx.fillStyle='#4444ff';ctx.fillRect(32,4,4,4);
+    ctx.fillStyle='#44cc44';ctx.fillRect(40,4,4,4);
+  } else if(accStyle==='halo'){
+    ctx.strokeStyle='#f6d860';ctx.lineWidth=3;
+    ctx.beginPath();ctx.ellipse(32,6,16,5,0,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle='rgba(246,216,96,0.3)';ctx.lineWidth=6;
+    ctx.beginPath();ctx.ellipse(32,6,16,5,0,0,Math.PI*2);ctx.stroke();
+  } else if(accStyle==='scarf'){
+    ctx.fillStyle=lighten(col,20);ctx.fillRect(16,32,32,6);
+    ctx.fillStyle=col;ctx.fillRect(16,32,32,3);
+    ctx.fillStyle=darken(col,20);ctx.fillRect(16,34,10,8);
+  }
+
+  // ============ 몸통 ============
+  if(isFemale){
+    // 여자 상의: 허리 잘록 + 가슴 실루엣
+    px(4,9,8,3,shirt);                                   // 상의 기본
+    px(4,9,1,3,shirtD); px(11,9,1,3,shirtD);             // 옆선 음영
+    px(4,11,8,1,shirtD);                                  // 허리선
+    px(5,12,2,1,lighten(shirt,20)); px(9,12,2,1,lighten(shirt,20)); // 가슴 하이라이트
+    px(4,12,8,1,shirt);                                   // 허리
+    // 치마: 아래로 퍼지는 A라인
+    px(3,13,10,1,pants);
+    px(2,14,12,1,pants);
+    px(2,15,12,1,pantsD);
+    // 치마 음영/주름
+    ctx.fillStyle=lighten(pantsRaw,50);
+    ctx.fillRect(20,52,4,4); ctx.fillRect(32,52,4,4); ctx.fillRect(44,52,4,4);
+    // 다리 (치마 아래 살짝)
+    px(5,15,2,1,skin); px(9,15,2,1,skin);
+  } else {
+    // 남자 몸통
+    px(4,9,8,4,shirt);
+    px(4,9,1,4,shirtD); px(11,9,1,4,shirtD); px(4,12,8,1,shirtD);
+    // 바지 두 다리 명확히
+    px(4,13,3,3,pants); px(9,13,3,3,pants);
+    px(4,13,1,3,pantsD); px(11,13,1,3,pantsD);
+    // 가랑이 선
+    ctx.fillStyle=pantsD; ctx.fillRect(28,52,8,2);
+  }
+
+  // ============ 팔 ============
+  if(isFemale){
+    // 여자: 팔 약간 가늘게
+    px(3,9,1,3,shirtD); px(12,9,1,3,shirtD);
+    px(3,12,1,1,skin);  px(12,12,1,1,skin);
+  } else {
+    px(2,9,2,3,shirtD); px(12,9,2,3,shirtD);
+    px(2,12,2,1,skin);  px(12,12,2,1,skin);
+  }
+
+  // ============ 신발 ============
+  if(isFemale){
+    // 여자: 힐 (뾰족 구두)
+    const heelC=darken(pantsRaw,20);
+    ctx.fillStyle=heelC; ctx.fillRect(18,60,10,3); // 왼발 앞
+    ctx.fillStyle=heelC; ctx.fillRect(16,62,3,3);  // 왼발 힐
+    ctx.fillStyle=heelC; ctx.fillRect(38,60,10,3); // 오른발 앞
+    ctx.fillStyle=heelC; ctx.fillRect(45,62,3,3);  // 오른발 힐
+    // 광택
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.fillRect(19,60,4,2); ctx.fillRect(39,60,4,2);
+  } else {
+    px(3,15,3,1,shoeC); px(10,15,3,1,shoeC);
+  }
+
+  // ============ 직업 고유 아이템 (항상 그림) ============
+  const ja=currentJobAcc;
+  if(ja==='magnifier'){
+    ctx.strokeStyle='#1a8a82';ctx.lineWidth=3;ctx.beginPath();ctx.arc(50,18,7,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='rgba(78,205,196,0.25)';ctx.beginPath();ctx.arc(50,18,7,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(55,23);ctx.lineTo(60,30);ctx.stroke();
+  } else if(ja==='headphone'){
+    ctx.strokeStyle='#333';ctx.lineWidth=3;ctx.beginPath();ctx.arc(32,16,14,Math.PI,0,false);ctx.stroke();
+    ctx.fillStyle='#555';ctx.fillRect(14,14,6,8);ctx.fillRect(44,14,6,8);
+    ctx.fillStyle='#888';ctx.fillRect(15,15,4,6);ctx.fillRect(45,15,4,6);
+  } else if(ja==='beret'){
+    ctx.fillStyle='#d63070';ctx.beginPath();ctx.ellipse(32,10,18,10,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=lighten('#d63070',30);ctx.beginPath();ctx.arc(42,8,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=darken('#d63070',20);ctx.fillRect(14,14,36,4);
+  } else if(ja==='headset'){
+    ctx.strokeStyle='#666';ctx.lineWidth=2;ctx.beginPath();ctx.arc(32,16,16,Math.PI,0,false);ctx.stroke();
+    ctx.fillStyle='#c06010';ctx.fillRect(14,14,4,8);ctx.fillRect(46,14,4,8);
+    ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(16,22);ctx.lineTo(16,30);ctx.lineTo(22,30);ctx.stroke();
+  } else if(ja==='chart'){
+    ctx.fillStyle='#333';ctx.fillRect(44,10,14,18);ctx.fillStyle='#eee';ctx.fillRect(45,11,12,16);
+    ctx.fillStyle='#2a7a30';ctx.fillRect(47,20,2,6);ctx.fillStyle='#6c3fc5';ctx.fillRect(50,17,2,9);ctx.fillStyle='#d63070';ctx.fillRect(53,22,2,5);
+  } else if(ja==='tie'){
+    ctx.fillStyle=darken(col,30);ctx.fillRect(28,36,8,4);
+    ctx.fillStyle=darken(col,20);ctx.fillRect(29,40,6,16);
+    ctx.beginPath();ctx.moveTo(29,54);ctx.lineTo(32,62);ctx.lineTo(35,54);ctx.fill();
+  } else if(ja==='stethoscope'){
+    ctx.strokeStyle='#aaa';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(20,36);ctx.quadraticCurveTo(10,48,16,56);ctx.stroke();
+    ctx.beginPath();ctx.arc(16,56,4,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='rgba(200,200,200,0.3)';ctx.beginPath();ctx.arc(16,56,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#aaa';ctx.fillRect(17,12,4,4);ctx.fillRect(23,10,4,4);
+  } else if(ja==='megaphone'){
+    ctx.fillStyle='#c8860a';ctx.beginPath();ctx.moveTo(44,16);ctx.lineTo(62,8);ctx.lineTo(62,28);ctx.lineTo(44,24);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#f6d860';ctx.fillRect(40,18,6,8);
+  } else if(ja==='book'){
+    ctx.fillStyle='#2060a0';ctx.fillRect(42,12,16,22);
+    ctx.fillStyle='#1040a0';ctx.fillRect(42,12,3,22);
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillRect(46,16,10,2);ctx.fillRect(46,20,8,2);ctx.fillRect(46,24,10,2);
+  } else if(ja==='camera'){
+    ctx.fillStyle='#333';ctx.fillRect(40,16,22,16);ctx.fillStyle='#444';ctx.fillRect(46,12,10,5);
+    ctx.strokeStyle='#777';ctx.lineWidth=2;ctx.beginPath();ctx.arc(51,24,5,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='rgba(150,200,255,0.3)';ctx.beginPath();ctx.arc(51,24,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#f6d860';ctx.fillRect(56,17,3,3);
+  }
+
+  // ============ 선택 액세서리 (UI에서 고른 것) ============
+  if(accStyle==='crown'){
+    px(5,0,1,2,'#f6d860');px(7,0,1,3,'#f6d860');px(9,0,1,3,'#f6d860');px(11,0,1,2,'#f6d860');
+    px(4,2,8,1,'#f6d860');
+    ctx.fillStyle='#ff4444';ctx.fillRect(24,4,4,4);ctx.fillStyle='#4444ff';ctx.fillRect(32,4,4,4);ctx.fillStyle='#44cc44';ctx.fillRect(40,4,4,4);
+  } else if(accStyle==='halo'){
+    ctx.strokeStyle='#f6d860';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(32,6,16,5,0,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle='rgba(246,216,96,0.3)';ctx.lineWidth=6;ctx.beginPath();ctx.ellipse(32,6,16,5,0,0,Math.PI*2);ctx.stroke();
+  } else if(accStyle==='scarf'){
+    ctx.fillStyle=lighten(col,20);ctx.fillRect(16,32,32,6);ctx.fillStyle=col;ctx.fillRect(16,32,32,3);ctx.fillStyle=darken(col,20);ctx.fillRect(16,34,10,8);
+  }
+}
+
+// ===== 이벤트 =====
+function selectJobPreset(btn){
+  document.querySelectorAll('.job-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentJob=btn.dataset.job;
+  const p=JOB_PRESETS[currentJob];
+  document.getElementById('job-icon-btn').textContent=p.icon;
+  document.getElementById('inp-job-name').value=p.label;
+  // 직업에 맞는 외형을 UI에 반영
+  const look=JOB_LOOKS[currentJob];
+  if(look) applyLookToUI(look[currentGender]||look.m);
+  statValues={};
+  buildStatSliders();
+  drawSprite();
+  updateCard();
+}
+
+function selectColor(dot,color){
+  document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('active'));
+  dot.classList.add('active');
+  currentColor=color;
+  drawSprite();
+  updateCard();
+}
+
+function onStat(stat,val){
+  statValues[stat]=parseInt(val);
+  document.getElementById('val-'+stat).textContent=val;
+  updateCard();
+}
+
+// ===== 카드 업데이트 =====
+function updateCard(){
+  const name   =document.getElementById('inp-name').value||'YOUR NAME';
+  const company=document.getElementById('inp-company').value||'GUILD NAME';
+  const contact=document.getElementById('inp-contact').value||'contact@email.com';
+  const motto  =document.getElementById('inp-motto').value||'한마디를 입력하세요';
+  const level  =document.getElementById('inp-level').value||'1';
+  const jobIcon=getCurrentIcon()||'⚔️';
+  const jobName=document.getElementById('inp-job-name').value||'ADVENTURER';
+
+  const lvNum=Math.max(1,Math.min(99,parseInt(level)||1));
+  document.querySelector('.card-lv').textContent='LV.'+String(lvNum).padStart(2,'0');
+  document.getElementById('card-name-el').textContent=name.toUpperCase();
+
+  const jobEl=document.getElementById('card-job-el');
+  jobEl.textContent=jobIcon+' '+jobName.toUpperCase();
+  // 프리셋 색상 유지 or 커스텀
+  const preset=JOB_PRESETS[currentJob];
+  jobEl.style.color=preset?preset.color:getComputedStyle(document.documentElement).getPropertyValue('--accent2').trim();
+
+  document.getElementById('card-company-el').textContent='[ '+company.toUpperCase()+' ]';
+  document.getElementById('card-contact-el').textContent=contact;
+  // ① 모토 중앙 정렬 출력
+  document.getElementById('card-motto-el').textContent='"'+motto+'"';
+
+  const total=Object.values(statValues).reduce((a,b)=>a+b,0);
+  let rarity=RARITY[0]; RARITY.forEach(r=>{if(total>=r.min)rarity=r;});
+  const rarEl=document.getElementById('card-rarity-el');
+  rarEl.textContent=rarity.sym+' '+rarity.label;
+  rarEl.className='card-rarity '+rarity.cls;
+
+  const statsEl=document.getElementById('card-stats-el');
+  const preset2=JOB_PRESETS[currentJob];
+  const stats=preset2?preset2.stats:Object.keys(statValues);
+  const BAR=['#1a8a82','#6c3fc5','#d63070','#c8860a','#2a7a30'];
+  statsEl.innerHTML=stats.map((s,i)=>{
+    const v=statValues[s]||50;
+    return `<div class="card-stat-row">
+      <span class="card-stat-label">${s}</span>
+      <div class="card-stat-bar-bg"><div class="card-stat-bar-fill" style="width:${v}%;background:${BAR[i%BAR.length]}"></div></div>
+      <span class="card-stat-num">${v}</span>
+    </div>`;
+  }).join('');
+
+  drawSprite();
+}
+
+// ===== 생성 애니메이션 =====
+function generateCard(){
+  updateCard();
+  applyCardTheme();
+  const card=document.getElementById('card-output');
+  // 모바일: 카드로 스크롤 (카드가 폼 위에 있으므로 항상 맨 위로)
+  if(window.innerWidth<=640){
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  // 눌림 → 튀어오름 → 글로우 연출
+  card.style.transition='transform 0.08s,box-shadow 0.08s';
+  card.style.transform='scale(0.94)';
+  const glowColor=currentBorderColor+'99';
+  setTimeout(()=>{
+    card.style.transform='scale(1.02)';
+    card.style.boxShadow=`0 0 50px ${glowColor},6px 6px 0 #000`;
+  },80);
+  setTimeout(()=>{
+    card.style.transform='scale(1)';
+    card.style.boxShadow='';
+  },220);
+  // 스탯 바 순차 애니메이션
+  document.querySelectorAll('.card-stat-bar-fill').forEach((bar,i)=>{
+    const w=bar.style.width; bar.style.width='0';
+    setTimeout(()=>{bar.style.width=w;},i*90+120);
+  });
+}
+
+// ===== PNG 다운로드 =====
+function downloadCard(){
+  const canvas=document.getElementById('export-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=480,H=640;
+  const dark=isDark;
+  const t=currentTheme;
+  const accentHex=currentBorderColor;
+  const textCol=dark?'#eeeef8':'#1a1612';
+  const mutedCol=dark?'#9090b0':'#7a7060';
+  const accent3hex=dark?'#4ecdc4':'#1a8a82';
+
+  // 배경 (선택된 테마)
+  const grad=ctx.createLinearGradient(0,0,W,H);
+  grad.addColorStop(0,t.grad[0]);
+  grad.addColorStop(0.5,t.grad[1]);
+  grad.addColorStop(1,t.grad[2]);
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+
+  // 테두리
+  ctx.strokeStyle=accentHex;ctx.lineWidth=6;ctx.strokeRect(3,3,W-6,H-6);
+
+  // 헤더
+  ctx.fillStyle=accentHex;ctx.fillRect(0,0,W,46);
+  ctx.fillStyle='#000';ctx.font='bold 13px "Press Start 2P",monospace';
+  ctx.textAlign='left';ctx.fillText('PIXEL CARD',18,30);
+  const lv='LV.'+String(document.getElementById('inp-level').value||'1').padStart(2,'0');
+  ctx.textAlign='right';ctx.fillText(lv,W-18,30);
+
+  // 코너
+  ctx.strokeStyle=accentHex;ctx.lineWidth=2;ctx.globalAlpha=.5;
+  [[16,58],[W-28,58],[16,H-42],[W-28,H-42]].forEach(([x,y],i)=>{
+    ctx.beginPath();
+    if(i===0){ctx.moveTo(x,y);ctx.lineTo(x,y+14);ctx.moveTo(x,y);ctx.lineTo(x+14,y);}
+    else if(i===1){ctx.moveTo(x,y);ctx.lineTo(x,y+14);ctx.moveTo(x,y);ctx.lineTo(x-14,y);}
+    else if(i===2){ctx.moveTo(x,y);ctx.lineTo(x,y-14);ctx.moveTo(x,y);ctx.lineTo(x+14,y);}
+    else{ctx.moveTo(x,y);ctx.lineTo(x,y-14);ctx.moveTo(x,y);ctx.lineTo(x-14,y);}
+    ctx.stroke();
+  });
+  ctx.globalAlpha=1;
+
+  // 스프라이트
+  const tmpC=document.createElement('canvas');tmpC.width=64;tmpC.height=64;
+  drawSprite(tmpC,currentColor,currentJob);
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(tmpC,W/2-72,54,144,144);
+
+  // 이름
+  ctx.textAlign='center';
+  const name=(document.getElementById('inp-name').value||'YOUR NAME').toUpperCase();
+  let fs=17;ctx.font=`bold ${fs}px "Press Start 2P",monospace`;ctx.fillStyle=accentHex;
+  while(ctx.measureText(name).width>W-80&&fs>9){fs--;ctx.font=`bold ${fs}px "Press Start 2P",monospace`;}
+  ctx.fillText(name,W/2,220);
+
+  // 직업
+  const jobIcon=getCurrentIcon()||'⚔️';
+  const jobName=document.getElementById('inp-job-name').value||'ADVENTURER';
+  const preset=JOB_PRESETS[currentJob];
+  ctx.font='17px VT323,monospace';ctx.fillStyle=preset?preset.color:accentHex;
+  ctx.fillText(jobIcon+' [ '+jobName.toUpperCase()+' ]',W/2,244);
+
+  // 회사
+  const company=document.getElementById('inp-company').value||'GUILD NAME';
+  ctx.fillStyle=accent3hex;ctx.font='15px VT323,monospace';
+  ctx.fillText('[ '+company.toUpperCase()+' ]',W/2,264);
+
+  // 연락처
+  const contact=document.getElementById('inp-contact').value||'';
+  ctx.fillStyle=mutedCol;ctx.font='13px VT323,monospace';
+  ctx.fillText(contact,W/2,282);
+
+  // 모토 (중앙)
+  const motto=document.getElementById('inp-motto').value||'';
+  ctx.fillStyle=accentHex;ctx.font='italic 14px VT323,monospace';
+  ctx.fillText('"'+motto+'"',W/2,300);
+
+  // 구분선
+  ctx.strokeStyle=dark?'rgba(255,255,255,.1)':'rgba(0,0,0,.1)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(36,312);ctx.lineTo(W-36,312);ctx.stroke();
+
+  // 스탯
+  const preset2=JOB_PRESETS[currentJob];
+  const stats=preset2?preset2.stats:Object.keys(statValues);
+  const BAR=['#1a8a82','#6c3fc5','#d63070','#c8860a','#2a7a30'];
+  ctx.textAlign='left';
+  stats.forEach((s,i)=>{
+    const v=statValues[s]||50;
+    const y=330+i*56;
+    ctx.fillStyle=mutedCol;ctx.font='11px VT323,monospace';ctx.fillText(s,38,y);
+    const bx=110,bw=W-158,bh=14;
+    ctx.fillStyle=dark?'rgba(0,0,0,.45)':'rgba(0,0,0,.08)';ctx.fillRect(bx,y-12,bw,bh);
+    ctx.strokeStyle=dark?'rgba(255,255,255,.18)':'rgba(0,0,0,.12)';ctx.lineWidth=1;ctx.strokeRect(bx,y-12,bw,bh);
+    ctx.fillStyle=BAR[i%BAR.length];ctx.fillRect(bx,y-12,bw*v/99,bh);
+    ctx.fillStyle=textCol;ctx.textAlign='right';ctx.font='12px VT323,monospace';
+    ctx.fillText(v,W-36,y);ctx.textAlign='left';
+  });
+
+  // 푸터
+  ctx.fillStyle=dark?'rgba(0,0,0,.5)':'rgba(0,0,0,.06)';ctx.fillRect(0,H-40,W,40);
+  ctx.strokeStyle=dark?'rgba(255,255,255,.1)':'rgba(0,0,0,.1)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,H-40);ctx.lineTo(W,H-40);ctx.stroke();
+
+  const total=Object.values(statValues).reduce((a,b)=>a+b,0);
+  let rarity=RARITY[0];RARITY.forEach(r=>{if(total>=r.min)rarity=r;});
+  const rarColor={LEGENDARY:accentHex,EPIC:'#6c3fc5',RARE:dark?'#60a5fa':'#2070c0',COMMON:mutedCol};
+  ctx.textAlign='center';ctx.fillStyle=rarColor[rarity.label];ctx.font='12px VT323,monospace';
+  ctx.fillText(rarity.sym+' '+rarity.label,W/2,H-14);
+
+  const a=document.createElement('a');a.download='pixel-card.png';a.href=canvas.toDataURL('image/png');a.click();
+}
+
+// ===== 링크 복사 =====
+function copyLink(){
+  const params=new URLSearchParams({
+    name:document.getElementById('inp-name').value,
+    job:currentJob,
+    jobicon:getCurrentIcon(),
+    gender:currentGender,
+    jobname:document.getElementById('inp-job-name').value,
+    company:document.getElementById('inp-company').value,
+    contact:document.getElementById('inp-contact').value,
+    motto:document.getElementById('inp-motto').value,
+    lv:document.getElementById('inp-level').value,
+    color:currentColor,
+    hair:document.getElementById('sel-hair').value,
+    haircolor:document.getElementById('sel-haircolor').value,
+    skin:document.getElementById('sel-skin').value,
+    pants:document.getElementById('sel-pants').value,
+    face:document.getElementById('sel-face').value,
+    acc:document.getElementById('sel-acc').value,
+    theme:currentTheme.id,
+    border:currentBorderColor,
+    stats:JSON.stringify(statValues)
+  });
+  navigator.clipboard.writeText(location.origin+location.pathname+'?'+params.toString()).then(()=>{
+    const btn=event.target,orig=btn.textContent;
+    btn.textContent='✓ 복사 완료!';setTimeout(()=>btn.textContent=orig,2000);
+  });
+}
+
+// ===== 랜덤 =====
+function randomCard(){
+  const jobs=Object.keys(JOB_PRESETS);
+  const rj=jobs[Math.floor(Math.random()*jobs.length)];
+  const rc=CHAR_COLORS[Math.floor(Math.random()*CHAR_COLORS.length)];
+  const names=['PIXEL HERO','BYTE KNIGHT','NULL HUNTER','BUG SLAYER','CODE WIZARD','DATA MAGE'];
+  const guilds=['INFINITY DEV','BYTE CORP','NULL GUILD','PIXEL STUDIO','ASYNC TEAM'];
+  const mottos=['버그는 내 밥','코드는 예술','데이터가 힘','팀워크 MAX','깃헙이 곧 나'];
+  // 외형은 JOB_LOOKS+성별로 자동 결정됨
+
+  document.getElementById('inp-name').value=names[Math.floor(Math.random()*names.length)];
+  document.getElementById('inp-company').value=guilds[Math.floor(Math.random()*guilds.length)];
+  document.getElementById('inp-contact').value='pixel@card.io';
+  document.getElementById('inp-motto').value=mottos[Math.floor(Math.random()*mottos.length)];
+  document.getElementById('inp-level').value=Math.floor(Math.random()*98+1);
+
+  document.querySelectorAll('.job-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`[data-job="${rj}"]`).classList.add('active');
+  currentJob=rj;
+  const p=JOB_PRESETS[rj];
+  document.getElementById('job-icon-btn').textContent=p.icon;
+  document.getElementById('inp-job-name').value=p.label;
+
+  document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('active'));
+  const idx=CHAR_COLORS.indexOf(rc);
+  document.querySelectorAll('.color-dot')[idx>=0?idx:0].classList.add('active');
+  currentColor=rc;
+
+  const genders=['m','f'];
+  const rg=genders[Math.floor(Math.random()*genders.length)];
+  currentGender=rg;
+  document.querySelectorAll('.gender-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('gender-'+rg).classList.add('active');
+  // 선택된 직업+성별 look 적용
+  const rLook=JOB_LOOKS[rj];
+  if(rLook) applyLookToUI(rLook[rg]||rLook.m);
+  // applyLookToUI가 외형을 설정; 테마도 랜덤으로 변경
+  const rt=CARD_THEMES[Math.floor(Math.random()*CARD_THEMES.length)];
+  currentTheme=rt; currentBorderColor=rt.border;
+  document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.theme-btn')[CARD_THEMES.indexOf(rt)]?.classList.add('active');
+  applyCardTheme();
+
+  statValues={};p.stats.forEach(s=>{statValues[s]=Math.floor(Math.random()*60+30);});
+  buildStatSliders();
+  generateCard();
+}
+
+// ===== URL 파라미터 로드 =====
+function loadFromURL(){
+  const p=new URLSearchParams(location.search);
+  if(!p.get('name')) return;
+  document.getElementById('inp-name').value=p.get('name')||'';
+  document.getElementById('inp-company').value=p.get('company')||'';
+  document.getElementById('inp-contact').value=p.get('contact')||'';
+  document.getElementById('inp-motto').value=p.get('motto')||'';
+  document.getElementById('inp-level').value=p.get('lv')||'1';
+  if(p.get('jobicon')) document.getElementById('job-icon-btn').textContent=p.get('jobicon');
+  if(p.get('jobname')) document.getElementById('inp-job-name').value=p.get('jobname');
+  if(p.get('hair'))      document.getElementById('sel-hair').value=p.get('hair');
+  if(p.get('haircolor')) document.getElementById('sel-haircolor').value=p.get('haircolor');
+  if(p.get('skin'))      document.getElementById('sel-skin').value=p.get('skin');
+  if(p.get('pants'))     document.getElementById('sel-pants').value=p.get('pants');
+  if(p.get('face'))      document.getElementById('sel-face').value=p.get('face');
+  if(p.get('acc'))       document.getElementById('sel-acc').value=p.get('acc');
+  if(p.get('gender')){
+    const g=p.get('gender');currentGender=g;
+    document.querySelectorAll('.gender-btn').forEach(b=>b.classList.remove('active'));
+    const gb=document.getElementById('gender-'+g);if(gb)gb.classList.add('active');
+  }
+  if(p.get('color')){
+    currentColor=p.get('color');
+    const idx=CHAR_COLORS.indexOf(currentColor);
+    if(idx>=0) document.querySelectorAll('.color-dot')[idx].classList.add('active');
+  }
+  if(p.get('job')){
+    currentJob=p.get('job');
+    document.querySelectorAll('.job-btn').forEach(b=>b.classList.remove('active'));
+    const jb=document.querySelector(`[data-job="${currentJob}"]`);
+    if(jb) jb.classList.add('active');
+    buildStatSliders();
+  }
+  if(p.get('stats')){try{statValues=JSON.parse(p.get('stats'));buildStatSliders();}catch(e){}}
+  if(p.get('theme')){
+    const t=CARD_THEMES.find(t=>t.id===p.get('theme'));
+    if(t){currentTheme=t;}
+  }
+  if(p.get('border')) currentBorderColor=p.get('border');
+}
+
+// 실시간 반영
+['inp-name','inp-company','inp-contact','inp-motto','inp-level'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',updateCard);
+});
+// 레벨 범위 클램핑
+document.getElementById('inp-level').addEventListener('change',function(){
+  const v=parseInt(this.value)||1;
+  this.value=Math.max(1,Math.min(99,v));
+  updateCard();
+});
+
+loadFromURL();
+init();
+</script>
+</body>
+</html>
